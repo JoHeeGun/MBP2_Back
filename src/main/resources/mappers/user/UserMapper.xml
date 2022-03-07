@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="kr.com.jo.repository.UserMapper">
+  <resultMap id="userResult" type="kr.com.jo.domain.UserVO">
+    <result column="ID"    property="id"    jdbcType="VARCHAR" />
+    <result column="PASSWORD"  property="password"  jdbcType="VARCHAR" />
+    <result column="EMAIL"   property="email"   jdbcType="VARCHAR" />
+    <result column="DELETED" property="delelted"  jdbcType="INTEGER"/>
+    <result column="JOIN_AT"     property="join_at"     jdbcType="VARCHAR"/>
+  </resultMap>
+  
+  
+  <select id="loginUser" resultType="int" parameterType="kr.com.jo.domain.UserVO">
+    SELECT COUNT(*)
+    FROM USER A
+    WHERE A.ID = #{id} AND A.PASSWORD = #{password} AND A.DELETED = 0
+  </select>
+  
+    <select id="checkUser" resultType="int" parameterType="kr.com.jo.domain.UserVO">
+    SELECT COUNT(*)
+    FROM USER A
+    WHERE A.ID = #{id} 
+  </select>
+  
+  <select id="getUser" resultMap="userResult" parameterType="kr.com.jo.domain.UserVO">
+    SELECT A.ID, A.EMAIL, A.JOIN_AT
+      FROM USER A
+     WHERE A.ID = #{id} AND A.DELETED = 0
+  </select>
+  
+ <insert id="signupUser"  parameterType="kr.com.jo.domain.UserVO">
+    INSERT INTO USER (ID, PASSWORD, EMAIL)
+    VALUES (#{id}, #{password},  #{email})
+  </insert>
+  
+  <update id="updateUser" parameterType="kr.com.jo.domain.UserVO">
+    UPDATE USER
+       SET 
+           PASSWORD = #{password}
+         , EMAIL = #{email}
+     WHERE ID = #{id}
+  </update>
+  
+    <update id="deleteUser" parameterType="kr.com.jo.domain.UserVO">
+    UPDATE USER
+       SET 
+           DELETED = 1
+       WHERE ID = #{id}
+  </update>
+  
+  
+  <select id="selectUserList" resultMap="userResult" parameterType="kr.com.jo.domain.UserVO">
+    SELECT  A.ID, A.EMAIL, A.JOIN_AT
+      FROM (
+            SELECT A.*, (@ROWNUM := @ROWNUM + 1) AS ROWNUM
+              FROM (
+                    SELECT A.ID, A.EMAIL, A.JOIN_AT
+                      FROM USER A
+                    <where>
+                      <if test="schVal != null and schVal != ''">
+                        A.ID LIKE CONCAT('%', #{schVal}, '%') 
+                      </if>
+                      AND A.DELETED = 0
+                    </where>
+                    ORDER BY
+                    JOIN_AT
+                    ) A, (SELECT @ROWNUM := 0) TEMP
+            ) A
+     WHERE ROWNUM BETWEEN #{startNo} AND #{endNo}
+  </select>
+  
+  
+    <select id="selectUserListCount" resultType="int" parameterType="kr.com.jo.domain.UserVO">
+    SELECT COUNT(*) AS TOTAL_CNT
+      FROM USER
+    <where>
+      <if test="schVal != null and schVal != ''">
+           ID LIKE CONCAT('%', #{schVal}, '%') 
+      </if>
+      AND DELETED = 0
+    </where>
+  </select>
+
+</mapper>

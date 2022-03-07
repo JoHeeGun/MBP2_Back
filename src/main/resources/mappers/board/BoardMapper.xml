@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.com.jo.repository.BoardMapper">
+  <resultMap id="boardResult" type="kr.com.jo.domain.BoardVO">
+    <result column="BOARD_NUM"   property="board_num"    jdbcType="INTEGER"/>
+    <result column="ID"    property="id"    jdbcType="VARCHAR" />
+    <result column="TITLE"  property="title"  jdbcType="VARCHAR" />
+    <result column="CONTENT"   property="content"   jdbcType="VARCHAR" />
+    <result column="CREATED_AT" property="created_at"  jdbcType="VARCHAR"/>
+    <result column="VIEW"     property="view"     jdbcType="INTEGER"/>
+    <result column="REPLY"    property="reply"    jdbcType="INTEGER"/>
+  </resultMap>
+  <select id="selectBoardList" resultMap="boardResult" parameterType="kr.com.jo.domain.BoardVO">
+    SELECT A.BOARD_NUM, A.ID, A.TITLE, A.CONTENT, A.CREATED_AT, A.VIEW, A.REPLY
+      FROM (
+            SELECT A.*, (@ROWNUM := @ROWNUM + 1) AS ROWNUM
+              FROM (
+                    SELECT A.BOARD_NUM, A.ID, A.TITLE, A.CONTENT, A.CREATED_AT, A.VIEW, (SELECT COUNT(*) FROM REPLY X WHERE X.BOARD_NUM = A.BOARD_NUM) AS REPLY
+                      FROM BOARD A
+                    <where>
+                      <if test="schType != null and schType != '' and schVal != null and schVal != ''">
+                        <choose>
+                          <when test="schType == 'board_num'">
+                            AND A.BOARD_NUM = #{schVal}
+                          </when>
+                          <when test="schType == 'title'">
+                            AND A.TITLE LIKE CONCAT('%', #{schVal}, '%')
+                          </when>
+                          <when test="schType == 'id'">
+                            AND A.ID LIKE CONCAT('%', #{schVal}, '%')
+                          </when>
+                        </choose>
+                      </if>
+                    </where>
+                    ORDER BY
+                    CREATED_AT DESC
+                    ) A, (SELECT @ROWNUM := 0) TEMP
+            ) A
+     WHERE ROWNUM BETWEEN #{startNo} AND #{endNo}
+  </select>
+                  
+  <select id="selectBoardListCount" resultType="int" parameterType="kr.com.jo.domain.BoardVO">
+    SELECT COUNT(*) AS TOTAL_CNT
+      FROM BOARD
+    <where>
+      <if test="schType != null and schType != '' and schVal != null and schVal != ''">
+        <choose>
+          <when test="schType == 'board_num'">
+            AND BOARD_NUM = #{schVal}
+          </when>
+          <when test="schType == 'title'">
+            AND TITLE LIKE CONCAT('%', #{schVal}, '%')
+          </when>
+          <when test="schType == 'id'">
+            AND ID LIKE CONCAT('%', #{schVal}, '%')
+          </when>
+        </choose>
+      </if>
+    </where>
+  </select>
+	
+	  <select id="selectBoardDetail" resultMap="boardResult" parameterType="kr.com.jo.domain.BoardVO">
+    SELECT A.BOARD_NUM, A.ID, A.TITLE, A.CONTENT, A.CREATED_AT, A.VIEW, (SELECT COUNT(*) FROM REPLY X WHERE X.REPLY_NUM = A.BOARD_NUM) AS REPLY
+      FROM BOARD A
+     WHERE A.BOARD_NUM = #{board_num}
+  </select>
+  
+    <update id="increaseViewCount" parameterType="kr.com.jo.domain.BoardVO">
+    UPDATE BOARD
+       SET VIEW = VIEW + 1
+     WHERE BOARD_NUM = #{board_num}
+  </update>
+			
+			
+  <insert id="insertBoard" parameterType="kr.com.jo.domain.BoardVO">
+    <selectKey resultType="int" keyProperty="board_num" order="BEFORE">
+      SELECT IFNULL(MAX(board_num), 0) + 1 AS board_num FROM BOARD
+    </selectKey>
+    INSERT INTO BOARD (BOARD_NUM, TITLE, CONTENT, ID)
+    VALUES (#{board_num}, #{title}, #{content}, #{id})
+  </insert>
+  
+  
+    <update id="updateBoard" parameterType="kr.com.jo.domain.BoardVO">
+    UPDATE BOARD
+       SET TITLE = #{title}
+         , CONTENT = #{content}
+     WHERE BOARD_NUM = #{board_num}
+  </update>
+  
+    <delete id="deleteBoard" parameterType="kr.com.jo.domain.BoardVO">
+    DELETE FROM BOARD
+     WHERE BOARD_NUM = #{board_num}
+  </delete>
+  
+  <resultMap id="replyResult" type="kr.com.jo.domain.ReplyVO">
+    <result column="REPLY_NUM" property="reply_num" jdbcType="INTEGER"/>
+    <result column="BOARD_NUM"   property="board_num"   jdbcType="INTEGER"/>
+    <result column="ID"   property="id"  jdbcType="VARCHAR"/>
+    <result column="CONTENT"  property="content" jdbcType="VARCHAR"/>
+    <result column="CREATED_AT" property="created_at" jdbcType="VARCHAR"/>
+  </resultMap>
+  <select id="selectReplyList" resultMap="replyResult" parameterType="kr.com.jo.domain.ReplyVO">
+    SELECT REPLY_NUM, BOARD_NUM, ID, CONTENT, CREATED_AT
+      FROM REPLY
+     WHERE BOARD_NUM = #{board_num}
+  </select>
+  
+  <select id="selectReplyListCount" resultType="int" parameterType="kr.com.jo.domain.ReplyVO">
+    SELECT COUNT(*) AS TOTAL_CNT
+      FROM REPLY
+      WHERE BOARD_NUM = #{board_num}
+  </select>
+  
+  
+  
+    <insert id="insertReply" parameterType="kr.com.jo.domain.ReplyVO">
+    <selectKey resultType="int" keyProperty="reply_num" order="BEFORE">
+      SELECT IFNULL(MAX(REPLY_NUM), 0) + 1 AS REPLY_NUM FROM REPLY WHERE BOARD_NUM = #{board_num}
+    </selectKey>
+    INSERT INTO REPLY (REPLY_NUM, BOARD_NUM, ID, CONTENT)
+    VALUES (#{reply_num}, #{board_num}, #{id}, #{content})
+  </insert>
+  
+    <update id="updateReply" parameterType="kr.com.jo.domain.ReplyVO">
+    UPDATE REPLY
+       SET CONTENT = #{content}
+     WHERE REPLY_NUM = #{reply_num}
+       AND BOARD_NUM = #{board_num}
+  </update>
+  
+  
+    <delete id="deleteReply" parameterType="kr.com.jo.domain.ReplyVO">
+    DELETE FROM REPLY
+     WHERE BOARD_NUM = #{board_num}
+     <if test="reply_num > 0">
+       AND REPLY_NUM = #{reply_num}
+     </if>
+  </delete>
+  
+  
+    <select id="selectmyBoardList" resultMap="boardResult" parameterType="kr.com.jo.domain.BoardVO">
+    SELECT A.BOARD_NUM, A.ID, A.TITLE, A.CONTENT, A.CREATED_AT, A.VIEW, A.REPLY
+      FROM (
+            SELECT A.*, (@ROWNUM := @ROWNUM + 1) AS ROWNUM
+              FROM (
+                    SELECT A.BOARD_NUM, A.ID, A.TITLE, A.CONTENT, A.CREATED_AT, A.VIEW, (SELECT COUNT(*) FROM REPLY X WHERE X.BOARD_NUM = A.BOARD_NUM) AS REPLY
+                      FROM BOARD A
+                    <where>
+                      <if test="schVal != null and schVal != ''">
+                      	A.TITLE LIKE CONCAT('%', #{schVal}, '%')
+                      </if>
+                      AND A.ID = #{id}
+                    </where>
+                    ORDER BY
+                    BOARD_NUM ASC
+                    ) A, (SELECT @ROWNUM := 0) TEMP
+            ) A
+     WHERE ROWNUM BETWEEN #{startNo} AND #{endNo}
+  </select>
+  
+    <select id="selectmyBoardListCount" resultType="int" parameterType="kr.com.jo.domain.BoardVO">
+	SELECT COUNT(*) AS TOTAL_CNT
+	FROM BOARD A
+	<where>
+		<if test="schVal != null and schVal != ''">
+			A.TITLE LIKE CONCAT('%', #{schVal}, '%')
+		</if>
+		AND A.ID = #{id}
+	</where>
+  </select>
+  		
+</mapper>

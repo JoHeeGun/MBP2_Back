@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.com.jo.repository.NoticeMapper">
+  <resultMap id="noticeResult" type="kr.com.jo.domain.NoticeVO">
+    <result column="NOTICE_NUM"   property="notice_num"    jdbcType="INTEGER"/>
+    <result column="ID"    property="id"    jdbcType="VARCHAR" />
+    <result column="TITLE"  property="title"  jdbcType="VARCHAR" />
+    <result column="CONTENT"   property="content"   jdbcType="VARCHAR" />
+    <result column="CREATED_AT" property="created_at"  jdbcType="VARCHAR"/>
+    <result column="VIEW"     property="view"     jdbcType="INTEGER"/>
+  </resultMap>
+  <select id="selectNoticeList" resultMap="noticeResult" parameterType="kr.com.jo.domain.NoticeVO">
+    SELECT A.NOTICE_NUM, A.ID, A.TITLE, A.CONTENT, A.CREATED_AT, A.VIEW
+      FROM (
+            SELECT A.*, (@ROWNUM := @ROWNUM + 1) AS ROWNUM
+              FROM (
+                    SELECT A.NOTICE_NUM, A.ID, A.TITLE, A.CONTENT, A.CREATED_AT, A.VIEW
+                      FROM NOTICE A
+                    <where>
+                      <if test="schVal != null and schVal != ''">
+                        A.TITLE LIKE CONCAT('%', #{schVal}, '%')
+                      </if>
+                    </where>
+                    ORDER BY
+                    NOTICE_NUM DESC
+                    ) A, (SELECT @ROWNUM := 0) TEMP
+            ) A
+     WHERE ROWNUM BETWEEN #{startNo} AND #{endNo}
+  </select>
+                  
+  <select id="selectNoticeListCount" resultType="int" parameterType="kr.com.jo.domain.NoticeVO">
+    SELECT COUNT(*) AS TOTAL_CNT
+      FROM NOTICE
+    <where>
+      <if test="schVal != null and schVal != ''">
+            AND TITLE LIKE CONCAT('%', #{schVal}, '%')
+      </if>
+    </where>
+  </select>
+  
+  	  <select id="selectNoticeDetail" resultMap="noticeResult" parameterType="kr.com.jo.domain.NoticeVO">
+    SELECT A.NOTICE_NUM, A.ID, A.TITLE, A.CONTENT, A.CREATED_AT, A.VIEW
+      FROM NOTICE A
+     WHERE A.NOTICE_NUM = #{notice_num}
+  </select>
+  
+      <update id="increaseViewCount" parameterType="kr.com.jo.domain.NoticeVO">
+    UPDATE NOTICE
+       SET VIEW = VIEW + 1
+     WHERE NOTICE_NUM = #{notice_num}
+  </update>
+  
+    <insert id="insertNotice" parameterType="kr.com.jo.domain.NoticeVO">
+    <selectKey resultType="int" keyProperty="notice_num" order="BEFORE">
+      SELECT IFNULL(MAX(notice_num), 0) + 1 AS notice_num FROM NOTICE
+    </selectKey>
+    INSERT INTO NOTICE (NOTICE_NUM, TITLE, CONTENT, ID)
+    VALUES (#{notice_num}, #{title}, #{content}, #{id})
+  </insert>
+ 
+      <update id="updateNotice" parameterType="kr.com.jo.domain.NoticeVO">
+    UPDATE NOTICE
+       SET TITLE = #{title}
+         , CONTENT = #{content}
+     WHERE NOTICE_NUM = #{notice_num}
+  </update>
+  
+      <delete id="deleteNotice" parameterType="kr.com.jo.domain.NoticeVO">
+    DELETE FROM NOTICE
+     WHERE NOTICE_NUM = #{notice_num}
+  </delete>
+  
+</mapper>
